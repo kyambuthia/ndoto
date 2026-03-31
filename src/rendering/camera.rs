@@ -2,6 +2,7 @@ use bevy::{camera::ScalingMode, prelude::*};
 
 use crate::rendering::scene::SceneRoot;
 
+const ATMOSPHERE_LERP_SPEED: f32 = 2.8;
 const CAMERA_LERP_SPEED: f32 = 6.5;
 const ROOT_LERP_SPEED: f32 = 5.0;
 const TWO_D_DEPTH_SCALE: f32 = 0.12;
@@ -64,6 +65,27 @@ pub fn update_view_projection(
     **camera = render_mode_spec(render_mode.mode).projection;
 }
 
+pub fn update_atmosphere(
+    time: Res<Time>,
+    render_mode: Res<RenderModeState>,
+    mut clear_color: ResMut<ClearColor>,
+    mut ambient_light: ResMut<GlobalAmbientLight>,
+    mut fog: Single<&mut DistanceFog, With<SandboxCamera>>,
+) {
+    let spec = render_mode_spec(render_mode.mode);
+    let blend = smoothing_factor(ATMOSPHERE_LERP_SPEED, time.delta_secs());
+
+    clear_color.0 = clear_color.0.mix(&spec.clear_color, blend);
+    ambient_light.color = ambient_light.color.mix(&spec.ambient_color, blend);
+    ambient_light.brightness += (spec.ambient_brightness - ambient_light.brightness) * blend;
+
+    fog.color = fog.color.mix(&spec.fog_color, blend);
+    if let FogFalloff::Linear { start, end } = &mut fog.falloff {
+        *start += (spec.fog_start - *start) * blend;
+        *end += (spec.fog_end - *end) * blend;
+    }
+}
+
 pub fn animate_view(
     time: Res<Time>,
     render_mode: Res<RenderModeState>,
@@ -79,6 +101,7 @@ pub fn animate_view(
         .lerp(desired_camera.translation, camera_blend);
     camera.rotation = camera.rotation.slerp(desired_camera.rotation, camera_blend);
 
+    // Keep one shared scene and make each mode legible by compressing axes on the root.
     let root_blend = smoothing_factor(ROOT_LERP_SPEED, time.delta_secs());
     scene_root.scale = scene_root.scale.lerp(spec.scene_scale, root_blend);
 }
@@ -89,6 +112,12 @@ fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
             eye: Vec3::new(11.5, 8.5, 13.0),
             focus: Vec3::new(0.0, 1.6, 0.0),
             scene_scale: Vec3::ONE,
+            clear_color: Color::srgb(0.055, 0.06, 0.08),
+            ambient_color: Color::srgb(0.72, 0.74, 0.8),
+            ambient_brightness: 22.0,
+            fog_color: Color::srgb(0.11, 0.115, 0.135),
+            fog_start: 16.0,
+            fog_end: 34.0,
             projection: Projection::Perspective(PerspectiveProjection {
                 fov: 50.0_f32.to_radians(),
                 ..default()
@@ -98,6 +127,12 @@ fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
             eye: Vec3::new(0.0, 8.0, 18.0),
             focus: Vec3::new(0.0, 1.5, 0.0),
             scene_scale: Vec3::new(1.0, 1.0, TWO_D_DEPTH_SCALE),
+            clear_color: Color::srgb(0.07, 0.076, 0.09),
+            ambient_color: Color::srgb(0.75, 0.76, 0.8),
+            ambient_brightness: 19.5,
+            fog_color: Color::srgb(0.13, 0.135, 0.155),
+            fog_start: 11.0,
+            fog_end: 24.0,
             projection: Projection::Orthographic(OrthographicProjection {
                 scaling_mode: ScalingMode::FixedVertical {
                     viewport_height: 10.5,
@@ -109,6 +144,12 @@ fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
             eye: Vec3::new(0.0, 2.3, 20.0),
             focus: Vec3::new(0.0, 2.3, 0.0),
             scene_scale: Vec3::new(1.0, ONE_D_HEIGHT_SCALE, ONE_D_DEPTH_SCALE),
+            clear_color: Color::srgb(0.082, 0.088, 0.102),
+            ambient_color: Color::srgb(0.78, 0.79, 0.82),
+            ambient_brightness: 16.0,
+            fog_color: Color::srgb(0.16, 0.165, 0.185),
+            fog_start: 8.0,
+            fog_end: 16.0,
             projection: Projection::Orthographic(OrthographicProjection {
                 scaling_mode: ScalingMode::FixedVertical {
                     viewport_height: 4.2,
@@ -127,5 +168,11 @@ struct RenderModeSpec {
     eye: Vec3,
     focus: Vec3,
     scene_scale: Vec3,
+    clear_color: Color,
+    ambient_color: Color,
+    ambient_brightness: f32,
+    fog_color: Color,
+    fog_start: f32,
+    fog_end: f32,
     projection: Projection,
 }
