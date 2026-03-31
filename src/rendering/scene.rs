@@ -38,6 +38,7 @@ pub fn setup_scene(
             Name::new("SandboxSceneRoot"),
             SceneRoot,
             Transform::default(),
+            Visibility::default(),
         ))
         .id();
 
