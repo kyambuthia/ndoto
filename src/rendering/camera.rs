@@ -15,11 +15,51 @@ pub enum RenderMode {
     ThreeD,
     TwoD,
     OneD,
+    FourD,
 }
 
-#[derive(Resource, Clone, Debug, Default)]
+#[derive(Resource, Clone, Debug)]
 pub struct RenderModeState {
     pub mode: RenderMode,
+    pub spatial_mode: RenderMode,
+}
+
+impl Default for RenderModeState {
+    fn default() -> Self {
+        Self {
+            mode: RenderMode::ThreeD,
+            spatial_mode: RenderMode::ThreeD,
+        }
+    }
+}
+
+impl RenderModeState {
+    pub fn is_four_d(&self) -> bool {
+        self.mode == RenderMode::FourD
+    }
+
+    pub fn effective_spatial_mode(&self) -> RenderMode {
+        match self.mode {
+            RenderMode::FourD => self.spatial_mode,
+            spatial_mode => spatial_mode,
+        }
+    }
+
+    pub fn set_spatial_mode(&mut self, mode: RenderMode) {
+        debug_assert!(mode != RenderMode::FourD);
+        self.spatial_mode = mode;
+        if !self.is_four_d() {
+            self.mode = mode;
+        }
+    }
+
+    pub fn toggle_four_d(&mut self) {
+        self.mode = if self.is_four_d() {
+            self.spatial_mode
+        } else {
+            RenderMode::FourD
+        };
+    }
 }
 
 #[derive(Component)]
@@ -50,11 +90,13 @@ pub fn update_render_mode(
     mut render_mode: ResMut<RenderModeState>,
 ) {
     if keyboard_input.just_pressed(KeyCode::Digit1) {
-        render_mode.mode = RenderMode::ThreeD;
+        render_mode.set_spatial_mode(RenderMode::ThreeD);
     } else if keyboard_input.just_pressed(KeyCode::Digit2) {
-        render_mode.mode = RenderMode::TwoD;
+        render_mode.set_spatial_mode(RenderMode::TwoD);
     } else if keyboard_input.just_pressed(KeyCode::Digit3) {
-        render_mode.mode = RenderMode::OneD;
+        render_mode.set_spatial_mode(RenderMode::OneD);
+    } else if keyboard_input.just_pressed(KeyCode::Digit4) {
+        render_mode.toggle_four_d();
     }
 }
 
@@ -62,7 +104,7 @@ pub fn update_view_projection(
     render_mode: Res<RenderModeState>,
     mut camera: Single<&mut Projection, With<SandboxCamera>>,
 ) {
-    **camera = render_mode_spec(render_mode.mode).projection;
+    **camera = render_mode_spec(render_mode.effective_spatial_mode()).projection;
 }
 
 pub fn update_atmosphere(
@@ -72,7 +114,7 @@ pub fn update_atmosphere(
     mut ambient_light: ResMut<GlobalAmbientLight>,
     mut fog: Single<&mut DistanceFog, With<SandboxCamera>>,
 ) {
-    let spec = render_mode_spec(render_mode.mode);
+    let spec = active_render_mode_spec(&render_mode);
     let blend = smoothing_factor(ATMOSPHERE_LERP_SPEED, time.delta_secs());
 
     clear_color.0 = clear_color.0.mix(&spec.clear_color, blend);
@@ -92,7 +134,7 @@ pub fn animate_view(
     mut camera: Single<&mut Transform, (With<SandboxCamera>, Without<SceneRoot>)>,
     mut scene_root: Single<&mut Transform, (With<SceneRoot>, Without<SandboxCamera>)>,
 ) {
-    let spec = render_mode_spec(render_mode.mode);
+    let spec = render_mode_spec(render_mode.effective_spatial_mode());
     let desired_camera = Transform::from_translation(spec.eye).looking_at(spec.focus, Vec3::Y);
 
     let camera_blend = smoothing_factor(CAMERA_LERP_SPEED, time.delta_secs());
@@ -106,8 +148,16 @@ pub fn animate_view(
     scene_root.scale = scene_root.scale.lerp(spec.scene_scale, root_blend);
 }
 
+pub fn active_render_mode_spec(render_mode: &RenderModeState) -> RenderModeSpec {
+    let mut spec = render_mode_spec(render_mode.effective_spatial_mode());
+    if render_mode.is_four_d() {
+        apply_four_d_overlay(&mut spec);
+    }
+    spec
+}
+
 pub fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
-    match mode {
+    let mut spec = match mode {
         RenderMode::ThreeD => RenderModeSpec {
             eye: Vec3::new(11.5, 8.5, 13.0),
             focus: Vec3::new(0.0, 1.6, 0.0),
@@ -160,7 +210,39 @@ pub fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
             }),
             point_light_range: 1.0,
         },
+        RenderMode::FourD => RenderModeSpec {
+            eye: Vec3::new(11.5, 8.5, 13.0),
+            focus: Vec3::new(0.0, 1.6, 0.0),
+            scene_scale: Vec3::ONE,
+            clear_color: Color::srgb(0.055, 0.06, 0.08),
+            ambient_color: Color::srgb(0.72, 0.74, 0.8),
+            ambient_brightness: 22.0,
+            fog_color: Color::srgb(0.11, 0.115, 0.135),
+            fog_start: 16.0,
+            fog_end: 34.0,
+            projection: Projection::Perspective(PerspectiveProjection {
+                fov: 50.0_f32.to_radians(),
+                ..default()
+            }),
+            point_light_range: 24.0,
+        },
+    };
+
+    if mode == RenderMode::FourD {
+        apply_four_d_overlay(&mut spec);
     }
+
+    spec
+}
+
+fn apply_four_d_overlay(spec: &mut RenderModeSpec) {
+    spec.clear_color = spec.clear_color.mix(&Color::srgb(0.028, 0.038, 0.062), 0.55);
+    spec.ambient_color = spec.ambient_color.mix(&Color::srgb(0.56, 0.66, 0.78), 0.4);
+    spec.ambient_brightness *= 0.9;
+    spec.fog_color = spec.fog_color.mix(&Color::srgb(0.08, 0.12, 0.18), 0.5);
+    spec.fog_start *= 0.82;
+    spec.fog_end *= 0.9;
+    spec.point_light_range *= 1.25;
 }
 
 pub(crate) fn smoothing_factor(speed: f32, delta_seconds: f32) -> f32 {
@@ -229,12 +311,15 @@ mod tests {
     fn render_mode_state_equality() {
         let state1 = RenderModeState {
             mode: RenderMode::ThreeD,
+            spatial_mode: RenderMode::ThreeD,
         };
         let state2 = RenderModeState {
             mode: RenderMode::ThreeD,
+            spatial_mode: RenderMode::ThreeD,
         };
         let state3 = RenderModeState {
             mode: RenderMode::TwoD,
+            spatial_mode: RenderMode::TwoD,
         };
         assert_eq!(state1.mode, state2.mode);
         assert_ne!(state1.mode, state3.mode);
@@ -244,11 +329,33 @@ mod tests {
     fn render_mode_clone_is_independent() {
         let state1 = RenderModeState {
             mode: RenderMode::ThreeD,
+            spatial_mode: RenderMode::ThreeD,
         };
         let mut state2 = state1.clone();
         state2.mode = RenderMode::OneD;
         assert_eq!(state1.mode, RenderMode::ThreeD);
         assert_eq!(state2.mode, RenderMode::OneD);
+    }
+
+    #[test]
+    fn four_d_preserves_underlying_spatial_mode() {
+        let mut state = RenderModeState::default();
+        state.set_spatial_mode(RenderMode::TwoD);
+        state.toggle_four_d();
+
+        assert!(state.is_four_d());
+        assert_eq!(state.effective_spatial_mode(), RenderMode::TwoD);
+    }
+
+    #[test]
+    fn active_render_mode_spec_adds_four_d_grade() {
+        let mut state = RenderModeState::default();
+        state.toggle_four_d();
+
+        let four_d = active_render_mode_spec(&state);
+        let three_d = render_mode_spec(RenderMode::ThreeD);
+        assert_ne!(four_d.clear_color, three_d.clear_color);
+        assert!(four_d.fog_start < three_d.fog_start);
     }
 }
 
