@@ -1,7 +1,9 @@
 mod rendering;
+mod time;
 
 use bevy::prelude::*;
 use rendering::DimensionalReadabilityPlugin;
+use time::TimeReversalPlugin;
 
 fn main() {
     App::new()
@@ -14,6 +16,6 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins(DimensionalReadabilityPlugin)
+        .add_plugins((DimensionalReadabilityPlugin, TimeReversalPlugin))
         .run();
 }
