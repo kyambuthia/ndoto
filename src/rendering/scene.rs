@@ -6,13 +6,24 @@ pub struct SceneRoot;
 #[derive(Component)]
 pub struct PrimaryPointLight;
 
-#[derive(Component)]
+#[derive(Component, Clone, Copy, Debug)]
 pub struct DreamLight {
-    anchor: Vec3,
-    radius: f32,
-    base_height: f32,
-    speed: f32,
-    intensity: f32,
+    pub(crate) anchor: Vec3,
+    pub(crate) radius: f32,
+    pub(crate) base_height: f32,
+    pub(crate) speed: f32,
+    pub(crate) intensity: f32,
+    pub(crate) phase: f32,
+}
+
+#[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum RecordableEntity {
+    Floor,
+    Cube,
+    Wall,
+    Pillar,
+    Block,
+    DreamLight,
 }
 
 pub fn setup_scene(
@@ -48,6 +59,7 @@ pub fn setup_scene(
     commands.entity(root).with_children(|parent| {
         parent.spawn((
             Name::new("Floor"),
+            RecordableEntity::Floor,
             Mesh3d(meshes.add(Cuboid::new(28.0, 0.2, 28.0))),
             MeshMaterial3d(floor_material.clone()),
             Transform::from_xyz(0.0, -0.1, 0.0),
@@ -55,6 +67,7 @@ pub fn setup_scene(
 
         parent.spawn((
             Name::new("Cube"),
+            RecordableEntity::Cube,
             Mesh3d(meshes.add(Cuboid::new(1.8, 1.8, 1.8))),
             MeshMaterial3d(structure_material.clone()),
             Transform::from_xyz(-3.4, 0.9, -2.5),
@@ -62,6 +75,7 @@ pub fn setup_scene(
 
         parent.spawn((
             Name::new("Wall"),
+            RecordableEntity::Wall,
             Mesh3d(meshes.add(Cuboid::new(0.7, 3.0, 7.2))),
             MeshMaterial3d(structure_material),
             Transform::from_xyz(4.0, 1.5, 0.4),
@@ -69,6 +83,7 @@ pub fn setup_scene(
 
         parent.spawn((
             Name::new("Pillar"),
+            RecordableEntity::Pillar,
             Mesh3d(meshes.add(Cylinder::new(0.7, 3.6).mesh().resolution(48))),
             MeshMaterial3d(accent_material.clone()),
             Transform::from_xyz(0.6, 1.8, 4.6),
@@ -76,6 +91,7 @@ pub fn setup_scene(
 
         parent.spawn((
             Name::new("Block"),
+            RecordableEntity::Block,
             Mesh3d(meshes.add(Cuboid::new(2.8, 0.8, 2.8))),
             MeshMaterial3d(accent_material),
             Transform::from_xyz(2.1, 0.4, -4.4),
@@ -99,6 +115,7 @@ pub fn setup_scene(
 
         parent.spawn((
             Name::new("DreamLight"),
+            RecordableEntity::DreamLight,
             PrimaryPointLight,
             DreamLight {
                 anchor: Vec3::new(0.0, 0.0, 0.0),
@@ -106,6 +123,7 @@ pub fn setup_scene(
                 base_height: 5.8,
                 speed: 0.26,
                 intensity: 280_000.0,
+                phase: 0.0,
             },
             PointLight {
                 intensity: 280_000.0,
@@ -121,10 +139,11 @@ pub fn setup_scene(
 
 pub fn animate_dream_light(
     time: Res<Time>,
-    dream_light: Single<(&DreamLight, &mut Transform, &mut PointLight), With<PrimaryPointLight>>,
+    dream_light: Single<(&mut DreamLight, &mut Transform, &mut PointLight), With<PrimaryPointLight>>,
 ) {
-    let (motion, mut transform, mut light) = dream_light.into_inner();
-    let phase = time.elapsed_secs() * motion.speed;
+    let (mut motion, mut transform, mut light) = dream_light.into_inner();
+    motion.phase += time.delta_secs() * motion.speed;
+    let phase = motion.phase;
 
     transform.translation = motion.anchor
         + Vec3::new(
@@ -142,9 +161,9 @@ pub fn update_lighting(
     render_mode: Res<crate::rendering::camera::RenderModeState>,
     mut point_light: Single<&mut PointLight, With<PrimaryPointLight>>,
 ) {
-    use crate::rendering::camera::render_mode_spec;
+    use crate::rendering::camera::active_render_mode_spec;
 
-    let spec = render_mode_spec(render_mode.mode);
+    let spec = active_render_mode_spec(&render_mode);
     let blend = 1.0 - (-LIGHT_LERP_SPEED * time.delta_secs()).exp();
 
     point_light.range += (spec.point_light_range - point_light.range) * blend;
