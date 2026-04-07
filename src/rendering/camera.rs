@@ -17,7 +17,7 @@ pub enum RenderMode {
     OneD,
 }
 
-#[derive(Resource, Debug, Default)]
+#[derive(Resource, Clone, Debug, Default)]
 pub struct RenderModeState {
     pub mode: RenderMode,
 }
@@ -106,7 +106,7 @@ pub fn animate_view(
     scene_root.scale = scene_root.scale.lerp(spec.scene_scale, root_blend);
 }
 
-fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
+pub fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
     match mode {
         RenderMode::ThreeD => RenderModeSpec {
             eye: Vec3::new(11.5, 8.5, 13.0),
@@ -122,6 +122,7 @@ fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
                 fov: 50.0_f32.to_radians(),
                 ..default()
             }),
+            point_light_range: 24.0,
         },
         RenderMode::TwoD => RenderModeSpec {
             eye: Vec3::new(0.0, 8.0, 18.0),
@@ -139,6 +140,7 @@ fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
                 },
                 ..OrthographicProjection::default_3d()
             }),
+            point_light_range: 3.0,
         },
         RenderMode::OneD => RenderModeSpec {
             eye: Vec3::new(0.0, 2.3, 20.0),
@@ -156,23 +158,110 @@ fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
                 },
                 ..OrthographicProjection::default_3d()
             }),
+            point_light_range: 1.0,
         },
     }
 }
 
-fn smoothing_factor(speed: f32, delta_seconds: f32) -> f32 {
+pub(crate) fn smoothing_factor(speed: f32, delta_seconds: f32) -> f32 {
     1.0 - (-speed * delta_seconds).exp()
 }
 
-struct RenderModeSpec {
-    eye: Vec3,
-    focus: Vec3,
-    scene_scale: Vec3,
-    clear_color: Color,
-    ambient_color: Color,
-    ambient_brightness: f32,
-    fog_color: Color,
-    fog_start: f32,
-    fog_end: f32,
-    projection: Projection,
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use bevy::camera::Projection;
+
+    #[test]
+    fn render_mode_default_is_3d() {
+        assert_eq!(RenderMode::default(), RenderMode::ThreeD);
+    }
+
+    #[test]
+    fn render_mode_spec_3d_has_perspective_projection() {
+        let spec = render_mode_spec(RenderMode::ThreeD);
+        assert!(matches!(spec.projection, Projection::Perspective(_)));
+        assert_eq!(spec.scene_scale, Vec3::ONE);
+    }
+
+    #[test]
+    fn render_mode_spec_2d_has_orthographic_projection() {
+        let spec = render_mode_spec(RenderMode::TwoD);
+        assert!(matches!(spec.projection, Projection::Orthographic(_)));
+        assert_eq!(spec.scene_scale.z, TWO_D_DEPTH_SCALE);
+    }
+
+    #[test]
+    fn render_mode_spec_1d_has_orthographic_projection() {
+        let spec = render_mode_spec(RenderMode::OneD);
+        assert!(matches!(spec.projection, Projection::Orthographic(_)));
+        assert_eq!(spec.scene_scale.y, ONE_D_HEIGHT_SCALE);
+        assert_eq!(spec.scene_scale.z, ONE_D_DEPTH_SCALE);
+    }
+
+    #[test]
+    fn render_mode_spec_1d_is_more_compressed_than_2d() {
+        let spec_2d = render_mode_spec(RenderMode::TwoD);
+        let spec_1d = render_mode_spec(RenderMode::OneD);
+        assert!(spec_1d.scene_scale.y < spec_2d.scene_scale.y);
+        assert!(spec_1d.scene_scale.z < spec_2d.scene_scale.z);
+    }
+
+    #[test]
+    fn smoothing_factor_returns_zero_at_zero_speed() {
+        let result = smoothing_factor(0.0, 1.0);
+        assert_eq!(result, 0.0);
+    }
+
+    #[test]
+    fn smoothing_factor_returns_zero_at_zero_delta() {
+        let result = smoothing_factor(1.0, 0.0);
+        assert_eq!(result, 0.0);
+    }
+
+    #[test]
+    fn smoothing_factor_approaches_one_for_large_speed() {
+        let result = smoothing_factor(100.0, 1.0);
+        assert!((result - 1.0).abs() < 0.001);
+    }
+
+    #[test]
+    fn render_mode_state_equality() {
+        let state1 = RenderModeState {
+            mode: RenderMode::ThreeD,
+        };
+        let state2 = RenderModeState {
+            mode: RenderMode::ThreeD,
+        };
+        let state3 = RenderModeState {
+            mode: RenderMode::TwoD,
+        };
+        assert_eq!(state1.mode, state2.mode);
+        assert_ne!(state1.mode, state3.mode);
+    }
+
+    #[test]
+    fn render_mode_clone_is_independent() {
+        let state1 = RenderModeState {
+            mode: RenderMode::ThreeD,
+        };
+        let mut state2 = state1.clone();
+        state2.mode = RenderMode::OneD;
+        assert_eq!(state1.mode, RenderMode::ThreeD);
+        assert_eq!(state2.mode, RenderMode::OneD);
+    }
+}
+
+pub(crate) struct RenderModeSpec {
+    pub(crate) eye: Vec3,
+    pub(crate) focus: Vec3,
+    pub(crate) scene_scale: Vec3,
+    pub(crate) clear_color: Color,
+    pub(crate) ambient_color: Color,
+    pub(crate) ambient_brightness: f32,
+    pub(crate) fog_color: Color,
+    pub(crate) fog_start: f32,
+    pub(crate) fog_end: f32,
+    pub(crate) projection: Projection,
+    pub(crate) point_light_range: f32,
 }

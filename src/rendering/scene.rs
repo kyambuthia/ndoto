@@ -4,6 +4,9 @@ use bevy::{light::CascadeShadowConfigBuilder, prelude::*};
 pub struct SceneRoot;
 
 #[derive(Component)]
+pub struct PrimaryPointLight;
+
+#[derive(Component)]
 pub struct DreamLight {
     anchor: Vec3,
     radius: f32,
@@ -96,6 +99,7 @@ pub fn setup_scene(
 
         parent.spawn((
             Name::new("DreamLight"),
+            PrimaryPointLight,
             DreamLight {
                 anchor: Vec3::new(0.0, 0.0, 0.0),
                 radius: 6.0,
@@ -117,7 +121,7 @@ pub fn setup_scene(
 
 pub fn animate_dream_light(
     time: Res<Time>,
-    dream_light: Single<(&DreamLight, &mut Transform, &mut PointLight)>,
+    dream_light: Single<(&DreamLight, &mut Transform, &mut PointLight), With<PrimaryPointLight>>,
 ) {
     let (motion, mut transform, mut light) = dream_light.into_inner();
     let phase = time.elapsed_secs() * motion.speed;
@@ -129,4 +133,19 @@ pub fn animate_dream_light(
             phase.sin() * motion.radius * 0.65,
         );
     light.intensity = motion.intensity + (phase * 1.4).sin() * 30_000.0;
+}
+
+const LIGHT_LERP_SPEED: f32 = 4.5;
+
+pub fn update_lighting(
+    time: Res<Time>,
+    render_mode: Res<crate::rendering::camera::RenderModeState>,
+    mut point_light: Single<&mut PointLight, With<PrimaryPointLight>>,
+) {
+    use crate::rendering::camera::render_mode_spec;
+
+    let spec = render_mode_spec(render_mode.mode);
+    let blend = 1.0 - (-LIGHT_LERP_SPEED * time.delta_secs()).exp();
+
+    point_light.range += (spec.point_light_range - point_light.range) * blend;
 }

@@ -8,7 +8,7 @@ use self::{
         RenderModeState, animate_view, setup_camera, update_atmosphere, update_render_mode,
         update_view_projection,
     },
-    scene::{animate_dream_light, setup_scene},
+    scene::{animate_dream_light, setup_scene, update_lighting},
 };
 
 pub struct DimensionalReadabilityPlugin;
@@ -30,6 +30,7 @@ impl Plugin for DimensionalReadabilityPlugin {
                 update_atmosphere,
                 animate_view,
                 animate_dream_light,
+                update_lighting,
             )
                 .chain(),
         );
