@@ -77,42 +77,42 @@ pub fn setup_scene(
             MeshMaterial3d(accent_material),
             Transform::from_xyz(2.1, 0.4, -4.4),
         ));
+
+        parent.spawn((
+            Name::new("SunLight"),
+            DirectionalLight {
+                illuminance: 18_000.0,
+                shadows_enabled: true,
+                ..default()
+            },
+            CascadeShadowConfigBuilder {
+                first_cascade_far_bound: 10.0,
+                maximum_distance: 32.0,
+                ..default()
+            }
+            .build(),
+            Transform::from_xyz(6.0, 12.0, 8.0).looking_at(Vec3::new(0.0, 1.0, 0.0), Vec3::Y),
+        ));
+
+        parent.spawn((
+            Name::new("DreamLight"),
+            DreamLight {
+                anchor: Vec3::new(0.0, 0.0, 0.0),
+                radius: 6.0,
+                base_height: 5.8,
+                speed: 0.26,
+                intensity: 280_000.0,
+            },
+            PointLight {
+                intensity: 280_000.0,
+                range: 24.0,
+                color: Color::srgb(0.74, 0.78, 0.95),
+                shadows_enabled: false,
+                ..default()
+            },
+            Transform::from_xyz(5.0, 5.8, 0.0),
+        ));
     });
-
-    commands.spawn((
-        Name::new("SunLight"),
-        DirectionalLight {
-            illuminance: 18_000.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        CascadeShadowConfigBuilder {
-            first_cascade_far_bound: 10.0,
-            maximum_distance: 32.0,
-            ..default()
-        }
-        .build(),
-        Transform::from_xyz(6.0, 12.0, 8.0).looking_at(Vec3::new(0.0, 1.0, 0.0), Vec3::Y),
-    ));
-
-    commands.spawn((
-        Name::new("DreamLight"),
-        DreamLight {
-            anchor: Vec3::new(0.0, 0.0, 0.0),
-            radius: 6.0,
-            base_height: 5.8,
-            speed: 0.26,
-            intensity: 280_000.0,
-        },
-        PointLight {
-            intensity: 280_000.0,
-            range: 24.0,
-            color: Color::srgb(0.74, 0.78, 0.95),
-            shadows_enabled: false,
-            ..default()
-        },
-        Transform::from_xyz(5.0, 5.8, 0.0),
-    ));
 }
 
 pub fn animate_dream_light(
