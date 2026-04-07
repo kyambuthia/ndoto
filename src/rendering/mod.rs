@@ -13,6 +13,9 @@ use self::{
 
 pub struct DimensionalReadabilityPlugin;
 
+#[derive(SystemSet, Debug, Hash, PartialEq, Eq, Clone)]
+pub struct RenderingUpdateSet;
+
 impl Plugin for DimensionalReadabilityPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(GlobalAmbientLight {
@@ -20,6 +23,7 @@ impl Plugin for DimensionalReadabilityPlugin {
             brightness: 22.0,
             ..default()
         })
+        .configure_sets(Update, RenderingUpdateSet)
         .init_resource::<RenderModeState>()
         .add_systems(Startup, (setup_scene, setup_camera))
         .add_systems(
@@ -32,7 +36,8 @@ impl Plugin for DimensionalReadabilityPlugin {
                 animate_dream_light,
                 update_lighting,
             )
-                .chain(),
+                .chain()
+                .in_set(RenderingUpdateSet),
         );
     }
 }
