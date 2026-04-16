@@ -8,8 +8,8 @@ use crate::rendering::RenderingUpdateSet;
 use self::{
     history::TimeHistoryState,
     systems::{
-        playback_state, record_state, setup_time_feedback, setup_time_indicator, update_time_mode,
-        update_time_indicator, update_time_trails,
+        playback_state, record_state, setup_time_feedback, setup_time_indicator,
+        update_time_indicator, update_time_mode, update_time_trails,
     },
 };
 
