@@ -47,11 +47,7 @@ pub(super) fn setup_time_feedback(
             Mesh3d(ghost_mesh.clone()),
             MeshMaterial3d(materials.add(StandardMaterial {
                 base_color: Color::srgba(0.45, 0.62, 0.92, alpha.max(0.03)),
-                emissive: LinearRgba::rgb(
-                    0.12 * brightness,
-                    0.18 * brightness,
-                    0.32 * brightness,
-                ),
+                emissive: LinearRgba::rgb(0.12 * brightness, 0.18 * brightness, 0.32 * brightness),
                 alpha_mode: AlphaMode::Blend,
                 unlit: true,
                 ..default()
@@ -144,14 +140,12 @@ pub(super) fn update_time_mode(
 
 pub(super) fn record_state(
     mut history_state: ResMut<TimeHistoryState>,
-    recordables: Query<
-        (
-            &RecordableEntity,
-            &Transform,
-            Option<&PointLight>,
-            Option<&DreamLight>,
-        ),
-    >,
+    recordables: Query<(
+        &RecordableEntity,
+        &Transform,
+        Option<&PointLight>,
+        Option<&DreamLight>,
+    )>,
 ) {
     if !history_state.recording {
         return;
@@ -163,9 +157,7 @@ pub(super) fn record_state(
 
     if history_state.cursor < history_state.newest_cursor() {
         let rewind_index = history_state.cursor.floor() as usize;
-        history_state
-            .history
-            .truncate_after(rewind_index);
+        history_state.history.truncate_after(rewind_index);
     }
 
     let mut entities = recordables
@@ -197,14 +189,12 @@ pub(super) fn record_state(
 pub(super) fn playback_state(
     time: Res<Time>,
     mut history_state: ResMut<TimeHistoryState>,
-    mut recordables: Query<
-        (
-            &RecordableEntity,
-            &mut Transform,
-            Option<&mut PointLight>,
-            Option<&mut DreamLight>,
-        ),
-    >,
+    mut recordables: Query<(
+        &RecordableEntity,
+        &mut Transform,
+        Option<&mut PointLight>,
+        Option<&mut DreamLight>,
+    )>,
 ) {
     let Some(direction) = history_state.playback_direction else {
         return;
@@ -237,16 +227,20 @@ pub(super) fn playback_state(
 
         apply_transform_sample(&mut transform, from, to, sample.blend);
 
-        if let (Some(mut light), Some(from_light), Some(to_light)) =
-            (point_light, from.point_light.as_ref(), to.point_light.as_ref())
-        {
+        if let (Some(mut light), Some(from_light), Some(to_light)) = (
+            point_light,
+            from.point_light.as_ref(),
+            to.point_light.as_ref(),
+        ) {
             light.intensity = lerp(from_light.intensity, to_light.intensity, sample.blend);
             light.range = lerp(from_light.range, to_light.range, sample.blend);
         }
 
-        if let (Some(mut motion), Some(from_motion), Some(to_motion)) =
-            (dream_light, from.dream_light.as_ref(), to.dream_light.as_ref())
-        {
+        if let (Some(mut motion), Some(from_motion), Some(to_motion)) = (
+            dream_light,
+            from.dream_light.as_ref(),
+            to.dream_light.as_ref(),
+        ) {
             apply_dream_light_sample(&mut motion, from_motion, to_motion, sample.blend);
         }
     }
@@ -305,8 +299,10 @@ pub(super) fn update_time_trails(
             continue;
         };
 
-        transform.translation =
-            from.transform.translation.lerp(to.transform.translation, sample.blend);
+        transform.translation = from
+            .transform
+            .translation
+            .lerp(to.transform.translation, sample.blend);
         let scale = (1.0 - ghost.sample_offset as f32 * 0.01).max(0.35);
         transform.scale = Vec3::splat(scale);
         *visibility = Visibility::Inherited;
