@@ -95,8 +95,6 @@ pub fn update_render_mode(
         render_mode.set_spatial_mode(RenderMode::TwoD);
     } else if keyboard_input.just_pressed(KeyCode::Digit3) {
         render_mode.set_spatial_mode(RenderMode::OneD);
-    } else if keyboard_input.just_pressed(KeyCode::Digit4) {
-        render_mode.toggle_four_d();
     }
 }
 
@@ -236,7 +234,9 @@ pub fn render_mode_spec(mode: RenderMode) -> RenderModeSpec {
 }
 
 fn apply_four_d_overlay(spec: &mut RenderModeSpec) {
-    spec.clear_color = spec.clear_color.mix(&Color::srgb(0.028, 0.038, 0.062), 0.55);
+    spec.clear_color = spec
+        .clear_color
+        .mix(&Color::srgb(0.028, 0.038, 0.062), 0.55);
     spec.ambient_color = spec.ambient_color.mix(&Color::srgb(0.56, 0.66, 0.78), 0.4);
     spec.ambient_brightness *= 0.9;
     spec.fog_color = spec.fog_color.mix(&Color::srgb(0.08, 0.12, 0.18), 0.5);
@@ -356,6 +356,23 @@ mod tests {
         let three_d = render_mode_spec(RenderMode::ThreeD);
         assert_ne!(four_d.clear_color, three_d.clear_color);
         assert!(four_d.fog_start < three_d.fog_start);
+    }
+
+    #[test]
+    fn update_render_mode_ignores_digit4() {
+        let mut app = App::new();
+        app.init_resource::<ButtonInput<KeyCode>>();
+        app.init_resource::<RenderModeState>();
+        app.add_systems(Update, update_render_mode);
+
+        app.world_mut()
+            .resource_mut::<ButtonInput<KeyCode>>()
+            .press(KeyCode::Digit4);
+        app.update();
+
+        let state = app.world().resource::<RenderModeState>();
+        assert_eq!(state.mode, RenderMode::ThreeD);
+        assert_eq!(state.spatial_mode, RenderMode::ThreeD);
     }
 }
 
