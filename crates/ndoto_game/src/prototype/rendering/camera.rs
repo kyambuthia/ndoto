@@ -2,6 +2,7 @@ use bevy::{camera::ScalingMode, prelude::*};
 use ndoto_framework::{
     dimension::{DimensionState, SpatialMode},
     input::FixedPlayerInput,
+    movement::PlayerControlled,
 };
 
 use crate::prototype::rendering::scene::SceneRoot;
@@ -82,9 +83,12 @@ pub fn animate_view(
     dimension_state: Res<DimensionState>,
     mut camera: Single<&mut Transform, (With<SandboxCamera>, Without<SceneRoot>)>,
     mut scene_root: Single<&mut Transform, (With<SceneRoot>, Without<SandboxCamera>)>,
+    player: Single<&Transform, (With<PlayerControlled>, Without<SandboxCamera>)>,
 ) {
     let spec = render_mode_spec(dimension_state.spatial_mode);
-    let desired_camera = Transform::from_translation(spec.eye).looking_at(spec.focus, Vec3::Y);
+    let follow_focus = follow_focus(dimension_state.spatial_mode, player.translation);
+    let desired_camera = Transform::from_translation(follow_focus + (spec.eye - spec.focus))
+        .looking_at(follow_focus, Vec3::Y);
 
     let camera_blend = smoothing_factor(CAMERA_LERP_SPEED, time.delta_secs());
     camera.translation = camera
@@ -177,6 +181,14 @@ pub(crate) fn smoothing_factor(speed: f32, delta_seconds: f32) -> f32 {
     1.0 - (-speed * delta_seconds).exp()
 }
 
+fn follow_focus(spatial_mode: SpatialMode, player_translation: Vec3) -> Vec3 {
+    match spatial_mode {
+        SpatialMode::ThreeD => Vec3::new(player_translation.x, 1.6, player_translation.z),
+        SpatialMode::TwoD => Vec3::new(player_translation.x, 1.5, 0.0),
+        SpatialMode::OneD => Vec3::new(player_translation.x, 2.3, 0.0),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -239,6 +251,22 @@ mod tests {
         let three_d = render_mode_spec(SpatialMode::ThreeD);
         assert_ne!(four_d.clear_color, three_d.clear_color);
         assert!(four_d.fog_start < three_d.fog_start);
+    }
+
+    #[test]
+    fn follow_focus_constrains_non_3d_modes() {
+        assert_eq!(
+            follow_focus(SpatialMode::ThreeD, Vec3::new(3.0, 9.0, 5.0)),
+            Vec3::new(3.0, 1.6, 5.0)
+        );
+        assert_eq!(
+            follow_focus(SpatialMode::TwoD, Vec3::new(3.0, 9.0, 5.0)),
+            Vec3::new(3.0, 1.5, 0.0)
+        );
+        assert_eq!(
+            follow_focus(SpatialMode::OneD, Vec3::new(3.0, 9.0, 5.0)),
+            Vec3::new(3.0, 2.3, 0.0)
+        );
     }
 }
 

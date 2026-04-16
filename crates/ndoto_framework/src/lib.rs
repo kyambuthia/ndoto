@@ -1,5 +1,6 @@
 pub mod dimension;
 pub mod input;
+pub mod movement;
 pub mod physics;
 
 use bevy::prelude::*;
@@ -11,6 +12,7 @@ impl Plugin for FrameworkPlugin {
         app.add_plugins((
             dimension::DimensionPlugin,
             input::PlayerInputPlugin,
+            movement::MovementPlugin,
             physics::PhysicsPlugin,
         ));
     }

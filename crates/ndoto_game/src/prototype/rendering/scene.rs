@@ -1,5 +1,6 @@
 use bevy::{light::CascadeShadowConfigBuilder, prelude::*};
 use ndoto_framework::dimension::DimensionState;
+use ndoto_framework::movement::{Grounded, LocomotionConfig, MovementVelocity, PlayerControlled};
 
 #[derive(Component)]
 pub struct SceneRoot;
@@ -19,6 +20,7 @@ pub struct DreamLight {
 
 #[derive(Component, Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum RecordableEntity {
+    Player,
     Floor,
     Cube,
     Wall,
@@ -47,6 +49,11 @@ pub fn setup_scene(
         perceptual_roughness: 0.88,
         ..default()
     });
+    let player_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.88, 0.73, 0.44),
+        perceptual_roughness: 0.72,
+        ..default()
+    });
 
     let root = commands
         .spawn((
@@ -58,6 +65,18 @@ pub fn setup_scene(
         .id();
 
     commands.entity(root).with_children(|parent| {
+        parent.spawn((
+            Name::new("Player"),
+            RecordableEntity::Player,
+            PlayerControlled,
+            LocomotionConfig::default(),
+            MovementVelocity::default(),
+            Grounded(true),
+            Mesh3d(meshes.add(Capsule3d::new(0.45, 0.9))),
+            MeshMaterial3d(player_material),
+            Transform::from_xyz(0.0, 0.9, 0.0),
+        ));
+
         parent.spawn((
             Name::new("Floor"),
             RecordableEntity::Floor,
