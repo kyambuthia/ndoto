@@ -139,7 +139,10 @@ pub fn setup_scene(
 
 pub fn animate_dream_light(
     time: Res<Time>,
-    dream_light: Single<(&mut DreamLight, &mut Transform, &mut PointLight), With<PrimaryPointLight>>,
+    dream_light: Single<
+        (&mut DreamLight, &mut Transform, &mut PointLight),
+        With<PrimaryPointLight>,
+    >,
 ) {
     let (mut motion, mut transform, mut light) = dream_light.into_inner();
     motion.phase += time.delta_secs() * motion.speed;
