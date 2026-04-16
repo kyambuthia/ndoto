@@ -2,8 +2,9 @@ pub mod history;
 pub mod systems;
 
 use bevy::prelude::*;
+use ndoto_engine::EngineFixedSet;
 
-use crate::rendering::RenderingUpdateSet;
+use crate::prototype::rendering::{PrototypeSimulationSet, RenderingUpdateSet};
 
 use self::{
     history::TimeHistoryState,
@@ -20,16 +21,15 @@ impl Plugin for TimeReversalPlugin {
         app.init_resource::<TimeHistoryState>()
             .add_systems(Startup, (setup_time_feedback, setup_time_indicator))
             .add_systems(
-                Update,
-                (
-                    update_time_mode,
-                    playback_state,
-                    record_state,
-                    update_time_indicator,
-                    update_time_trails,
-                )
+                FixedUpdate,
+                (update_time_mode, playback_state, record_state)
                     .chain()
-                    .after(RenderingUpdateSet),
+                    .after(PrototypeSimulationSet)
+                    .in_set(EngineFixedSet::Simulation),
+            )
+            .add_systems(
+                Update,
+                (update_time_indicator, update_time_trails).after(RenderingUpdateSet),
             );
     }
 }

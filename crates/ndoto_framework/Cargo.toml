@@ -1,0 +1,8 @@
+[package]
+name = "ndoto_framework"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+bevy.workspace = true
+ndoto_engine = { path = "../ndoto_engine" }

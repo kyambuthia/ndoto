@@ -2,7 +2,7 @@ use std::collections::VecDeque;
 
 use bevy::prelude::*;
 
-use crate::rendering::scene::RecordableEntity;
+use crate::prototype::rendering::scene::RecordableEntity;
 
 pub const HISTORY_SECONDS: usize = 30;
 pub const HISTORY_FPS: usize = 60;

@@ -1,13 +1,8 @@
-mod rendering;
-mod time;
-
 use bevy::prelude::*;
-use rendering::DimensionalReadabilityPlugin;
-use time::TimeReversalPlugin;
+use ndoto_game::NdotoGamePlugin;
 
 fn main() {
     App::new()
-        .insert_resource(ClearColor(Color::srgb(0.055, 0.06, 0.08)))
         .add_plugins(DefaultPlugins.set(WindowPlugin {
             primary_window: Some(Window {
                 title: "ndoto :: dimensional readability prototype".into(),
@@ -16,6 +11,6 @@ fn main() {
             }),
             ..default()
         }))
-        .add_plugins((DimensionalReadabilityPlugin, TimeReversalPlugin))
+        .add_plugins(NdotoGamePlugin)
         .run();
 }

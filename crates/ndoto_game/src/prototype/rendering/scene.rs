@@ -1,4 +1,5 @@
 use bevy::{light::CascadeShadowConfigBuilder, prelude::*};
+use ndoto_framework::dimension::DimensionState;
 
 #[derive(Component)]
 pub struct SceneRoot;
@@ -138,7 +139,7 @@ pub fn setup_scene(
 }
 
 pub fn animate_dream_light(
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     dream_light: Single<
         (&mut DreamLight, &mut Transform, &mut PointLight),
         With<PrimaryPointLight>,
@@ -161,12 +162,12 @@ const LIGHT_LERP_SPEED: f32 = 4.5;
 
 pub fn update_lighting(
     time: Res<Time>,
-    render_mode: Res<crate::rendering::camera::RenderModeState>,
+    dimension_state: Res<DimensionState>,
     mut point_light: Single<&mut PointLight, With<PrimaryPointLight>>,
 ) {
-    use crate::rendering::camera::active_render_mode_spec;
+    use crate::prototype::rendering::camera::active_render_mode_spec;
 
-    let spec = active_render_mode_spec(&render_mode);
+    let spec = active_render_mode_spec(&dimension_state);
     let blend = 1.0 - (-LIGHT_LERP_SPEED * time.delta_secs()).exp();
 
     point_light.range += (spec.point_light_range - point_light.range) * blend;

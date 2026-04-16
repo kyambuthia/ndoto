@@ -3351,6 +3351,31 @@ name = "ndoto"
 version = "0.1.0"
 dependencies = [
  "bevy",
+ "ndoto_game",
+]
+
+[[package]]
+name = "ndoto_engine"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+]
+
+[[package]]
+name = "ndoto_framework"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "ndoto_engine",
+]
+
+[[package]]
+name = "ndoto_game"
+version = "0.1.0"
+dependencies = [
+ "bevy",
+ "ndoto_engine",
+ "ndoto_framework",
 ]
 
 [[package]]

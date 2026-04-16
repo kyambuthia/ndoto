@@ -1,10 +1,8 @@
 use bevy::{color::LinearRgba, prelude::*};
+use ndoto_framework::{dimension::DimensionState, input::FixedPlayerInput};
 
-use crate::{
-    rendering::{
-        camera::RenderModeState,
-        scene::{DreamLight, RecordableEntity},
-    },
+use crate::prototype::{
+    rendering::scene::{DreamLight, RecordableEntity},
     time::history::{
         DreamLightSnapshot, EntitySnapshot, FrameSnapshot, PlaybackDirection, PointLightSnapshot,
         TimeHistoryState,
@@ -116,18 +114,18 @@ pub(super) fn setup_time_indicator(mut commands: Commands) {
 }
 
 pub(super) fn update_time_mode(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut render_mode: ResMut<RenderModeState>,
+    player_input: Res<FixedPlayerInput>,
+    mut dimension_state: ResMut<DimensionState>,
     mut history_state: ResMut<TimeHistoryState>,
 ) {
-    if keyboard_input.just_pressed(KeyCode::Digit4) {
-        render_mode.toggle_four_d();
+    if player_input.toggle_four_d {
+        dimension_state.toggle_four_d();
     }
 
-    history_state.playback_direction = if render_mode.is_four_d() {
-        if keyboard_input.pressed(KeyCode::Space) || keyboard_input.pressed(KeyCode::KeyR) {
+    history_state.playback_direction = if dimension_state.is_four_d() {
+        if player_input.rewind {
             Some(PlaybackDirection::Rewind)
-        } else if keyboard_input.pressed(KeyCode::KeyF) {
+        } else if player_input.fast_forward {
             Some(PlaybackDirection::Forward)
         } else {
             None
@@ -187,7 +185,7 @@ pub(super) fn record_state(
 }
 
 pub(super) fn playback_state(
-    time: Res<Time>,
+    time: Res<Time<Fixed>>,
     mut history_state: ResMut<TimeHistoryState>,
     mut recordables: Query<(
         &RecordableEntity,
@@ -247,13 +245,13 @@ pub(super) fn playback_state(
 }
 
 pub(super) fn update_time_indicator(
-    render_mode: Res<RenderModeState>,
+    dimension_state: Res<DimensionState>,
     history_state: Res<TimeHistoryState>,
     mut root: Single<&mut Visibility, With<TimeIndicatorRoot>>,
     mut fill: Single<&mut Node, With<TimeIndicatorFill>>,
     mut label: Single<&mut Text, With<TimeIndicatorLabel>>,
 ) {
-    **root = if render_mode.is_four_d() {
+    **root = if dimension_state.is_four_d() {
         Visibility::Inherited
     } else {
         Visibility::Hidden
@@ -275,12 +273,12 @@ pub(super) fn update_time_indicator(
 }
 
 pub(super) fn update_time_trails(
-    render_mode: Res<RenderModeState>,
+    dimension_state: Res<DimensionState>,
     history_state: Res<TimeHistoryState>,
     mut ghosts: Query<(&TimeTrailGhost, &mut Transform, &mut Visibility)>,
 ) {
     for (ghost, mut transform, mut visibility) in &mut ghosts {
-        if !render_mode.is_four_d() || history_state.history.len() <= ghost.sample_offset {
+        if !dimension_state.is_four_d() || history_state.history.len() <= ghost.sample_offset {
             *visibility = Visibility::Hidden;
             continue;
         }

@@ -1,7 +1,14 @@
+[workspace]
+members = ["crates/ndoto_engine", "crates/ndoto_framework", "crates/ndoto_game"]
+
+[workspace.dependencies]
+bevy = "0.18.1"
+
 [package]
 name = "ndoto"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-bevy = "0.18.1"
+bevy.workspace = true
+ndoto_game = { path = "crates/ndoto_game" }
