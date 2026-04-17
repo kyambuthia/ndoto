@@ -1,4 +1,4 @@
-use bevy::{light::CascadeShadowConfigBuilder, prelude::*};
+use bevy::{color::LinearRgba, light::CascadeShadowConfigBuilder, prelude::*};
 use ndoto_framework::dimension::DimensionState;
 use ndoto_framework::movement::{Grounded, LocomotionConfig, MovementVelocity, PlayerControlled};
 use ndoto_framework::physics::BoxCollider;
@@ -36,23 +36,26 @@ pub fn setup_scene(
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     let floor_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.2, 0.215, 0.24),
-        perceptual_roughness: 1.0,
+        base_color: Color::srgb(0.085, 0.11, 0.145),
+        perceptual_roughness: 0.98,
         ..default()
     });
     let structure_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.58, 0.6, 0.63),
-        perceptual_roughness: 0.94,
+        base_color: Color::srgb(0.35, 0.42, 0.52),
+        perceptual_roughness: 0.9,
         ..default()
     });
     let accent_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.67, 0.69, 0.74),
-        perceptual_roughness: 0.88,
+        base_color: Color::srgb(0.3, 0.54, 0.76),
+        emissive: LinearRgba::rgb(0.05, 0.12, 0.18),
+        metallic: 0.08,
+        perceptual_roughness: 0.72,
         ..default()
     });
     let player_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.88, 0.73, 0.44),
-        perceptual_roughness: 0.72,
+        base_color: Color::srgb(0.93, 0.74, 0.38),
+        emissive: LinearRgba::rgb(0.04, 0.02, 0.01),
+        perceptual_roughness: 0.64,
         ..default()
     });
     let root = commands
@@ -152,7 +155,7 @@ pub fn setup_scene(
             PointLight {
                 intensity: 280_000.0,
                 range: 24.0,
-                color: Color::srgb(0.74, 0.78, 0.95),
+                color: Color::srgb(0.52, 0.78, 1.0),
                 shadows_enabled: false,
                 ..default()
             },

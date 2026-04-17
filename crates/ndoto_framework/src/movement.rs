@@ -128,7 +128,7 @@ pub fn apply_player_locomotion(
 
 fn constrained_move_axis(move_axis: IVec2, query_context: DimensionQueryContext) -> Vec3 {
     let wish = Vec2::new(move_axis.x as f32, move_axis.y as f32).clamp_length_max(1.0);
-    query_context.project_direction(Vec3::new(wish.x, 0.0, wish.y))
+    query_context.project_direction(Vec3::new(wish.x, 0.0, -wish.y))
 }
 
 fn resolve_static_collisions<'a>(
@@ -197,7 +197,7 @@ mod tests {
             Vec3::new(
                 std::f32::consts::FRAC_1_SQRT_2,
                 0.0,
-                std::f32::consts::FRAC_1_SQRT_2
+                -std::f32::consts::FRAC_1_SQRT_2
             )
         );
         assert_eq!(
@@ -218,6 +218,18 @@ mod tests {
             ),
             Vec3::new(-std::f32::consts::FRAC_1_SQRT_2, 0.0, 0.0)
         );
+    }
+
+    #[test]
+    fn forward_input_points_along_negative_z_in_3d() {
+        let movement = constrained_move_axis(
+            IVec2::new(0, 1),
+            DimensionQueryContext {
+                spatial_mode: crate::dimension::SpatialMode::ThreeD,
+            },
+        );
+
+        assert_eq!(movement, Vec3::NEG_Z);
     }
 
     #[test]
