@@ -10,7 +10,7 @@ use crate::prototype::rendering::scene::SceneRoot;
 const ATMOSPHERE_LERP_SPEED: f32 = 2.8;
 const CAMERA_LERP_SPEED: f32 = 6.5;
 const ROOT_LERP_SPEED: f32 = 5.0;
-const TWO_D_DEPTH_SCALE: f32 = 0.12;
+const TWO_D_DEPTH_SCALE: f32 = 0.35;
 const ONE_D_HEIGHT_SCALE: f32 = 0.08;
 const ONE_D_DEPTH_SCALE: f32 = 0.02;
 
@@ -52,9 +52,15 @@ pub fn update_render_mode(
 
 pub fn update_view_projection(
     dimension_state: Res<DimensionState>,
+    mut last_spatial_mode: Local<Option<SpatialMode>>,
     mut camera: Single<&mut Projection, With<SandboxCamera>>,
 ) {
+    if last_spatial_mode.as_ref() == Some(&dimension_state.spatial_mode) {
+        return;
+    }
+
     **camera = render_mode_spec(dimension_state.spatial_mode).projection;
+    *last_spatial_mode = Some(dimension_state.spatial_mode);
 }
 
 pub fn update_atmosphere(
@@ -82,8 +88,22 @@ pub fn animate_view(
     time: Res<Time>,
     dimension_state: Res<DimensionState>,
     mut camera: Single<&mut Transform, (With<SandboxCamera>, Without<SceneRoot>)>,
-    mut scene_root: Single<&mut Transform, (With<SceneRoot>, Without<SandboxCamera>)>,
-    player: Single<&Transform, (With<PlayerControlled>, Without<SandboxCamera>)>,
+    mut scene_root: Single<
+        &mut Transform,
+        (
+            With<SceneRoot>,
+            Without<SandboxCamera>,
+            Without<PlayerControlled>,
+        ),
+    >,
+    player: Single<
+        &Transform,
+        (
+            With<PlayerControlled>,
+            Without<SandboxCamera>,
+            Without<SceneRoot>,
+        ),
+    >,
 ) {
     let spec = render_mode_spec(dimension_state.spatial_mode);
     let follow_focus = follow_focus(dimension_state.spatial_mode, player.translation);
@@ -127,16 +147,17 @@ pub(crate) fn render_mode_spec(mode: SpatialMode) -> RenderModeSpec {
             point_light_range: 24.0,
         },
         SpatialMode::TwoD => RenderModeSpec {
-            eye: Vec3::new(0.0, 8.0, 18.0),
-            focus: Vec3::new(0.0, 1.5, 0.0),
+            eye: Vec3::new(0.0, 1.9, 9.5),
+            focus: Vec3::new(0.0, 1.9, 0.0),
             scene_scale: Vec3::new(1.0, 1.0, TWO_D_DEPTH_SCALE),
             clear_color: Color::srgb(0.07, 0.076, 0.09),
             ambient_color: Color::srgb(0.75, 0.76, 0.8),
             ambient_brightness: 19.5,
             fog_color: Color::srgb(0.13, 0.135, 0.155),
-            fog_start: 11.0,
+            fog_start: 12.0,
             fog_end: 24.0,
             projection: Projection::Orthographic(OrthographicProjection {
+                near: -1000.0,
                 scaling_mode: ScalingMode::FixedVertical {
                     viewport_height: 10.5,
                 },
@@ -145,18 +166,18 @@ pub(crate) fn render_mode_spec(mode: SpatialMode) -> RenderModeSpec {
             point_light_range: 3.0,
         },
         SpatialMode::OneD => RenderModeSpec {
-            eye: Vec3::new(0.0, 2.3, 20.0),
-            focus: Vec3::new(0.0, 2.3, 0.0),
+            eye: Vec3::new(0.0, 2.2, 9.0),
+            focus: Vec3::new(0.0, 2.2, 0.0),
             scene_scale: Vec3::new(1.0, ONE_D_HEIGHT_SCALE, ONE_D_DEPTH_SCALE),
             clear_color: Color::srgb(0.082, 0.088, 0.102),
             ambient_color: Color::srgb(0.78, 0.79, 0.82),
             ambient_brightness: 16.0,
             fog_color: Color::srgb(0.16, 0.165, 0.185),
-            fog_start: 8.0,
-            fog_end: 16.0,
+            fog_start: 12.0,
+            fog_end: 24.0,
             projection: Projection::Orthographic(OrthographicProjection {
                 scaling_mode: ScalingMode::FixedVertical {
-                    viewport_height: 4.2,
+                    viewport_height: 8.0,
                 },
                 ..OrthographicProjection::default_3d()
             }),
@@ -184,7 +205,7 @@ pub(crate) fn smoothing_factor(speed: f32, delta_seconds: f32) -> f32 {
 fn follow_focus(spatial_mode: SpatialMode, player_translation: Vec3) -> Vec3 {
     match spatial_mode {
         SpatialMode::ThreeD => Vec3::new(player_translation.x, 1.6, player_translation.z),
-        SpatialMode::TwoD => Vec3::new(player_translation.x, 1.5, 0.0),
+        SpatialMode::TwoD => Vec3::new(player_translation.x, 2.3, 0.0),
         SpatialMode::OneD => Vec3::new(player_translation.x, 2.3, 0.0),
     }
 }
@@ -261,7 +282,7 @@ mod tests {
         );
         assert_eq!(
             follow_focus(SpatialMode::TwoD, Vec3::new(3.0, 9.0, 5.0)),
-            Vec3::new(3.0, 1.5, 0.0)
+            Vec3::new(3.0, 2.3, 0.0)
         );
         assert_eq!(
             follow_focus(SpatialMode::OneD, Vec3::new(3.0, 9.0, 5.0)),
