@@ -107,7 +107,7 @@ pub fn setup_scene(
             Name::new("Pillar"),
             RecordableEntity::Pillar,
             BoxCollider::new(Vec3::new(0.7, 1.8, 0.7)),
-            Mesh3d(meshes.add(Cylinder::new(0.7, 3.6).mesh().resolution(48))),
+            Mesh3d(meshes.add(Cylinder::new(0.7, 3.6).mesh().resolution(24))),
             MeshMaterial3d(accent_material.clone()),
             Transform::from_xyz(0.6, 1.8, 4.6),
         ));
@@ -125,12 +125,12 @@ pub fn setup_scene(
             Name::new("SunLight"),
             DirectionalLight {
                 illuminance: 18_000.0,
-                shadows_enabled: true,
+                shadows_enabled: false,
                 ..default()
             },
             CascadeShadowConfigBuilder {
-                first_cascade_far_bound: 10.0,
-                maximum_distance: 32.0,
+                num_cascades: 1,
+                maximum_distance: 18.0,
                 ..default()
             }
             .build(),

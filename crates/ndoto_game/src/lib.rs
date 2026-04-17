@@ -1,3 +1,4 @@
+mod dev_capture;
 pub mod prototype;
 
 use bevy::prelude::*;
@@ -14,5 +15,7 @@ impl Plugin for NdotoGamePlugin {
                 FrameworkPlugin,
                 prototype::PrototypeGamePlugin,
             ));
+
+        dev_capture::configure(app);
     }
 }
