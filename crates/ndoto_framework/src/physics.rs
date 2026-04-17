@@ -38,6 +38,17 @@ impl AxisMask {
     }
 }
 
+#[derive(Component, Clone, Copy, Debug, PartialEq)]
+pub struct BoxCollider {
+    pub half_extents: Vec3,
+}
+
+impl BoxCollider {
+    pub const fn new(half_extents: Vec3) -> Self {
+        Self { half_extents }
+    }
+}
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct DimensionQueryContext {
     pub spatial_mode: SpatialMode,

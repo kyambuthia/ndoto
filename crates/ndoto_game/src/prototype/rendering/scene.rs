@@ -1,6 +1,7 @@
 use bevy::{light::CascadeShadowConfigBuilder, prelude::*};
 use ndoto_framework::dimension::DimensionState;
 use ndoto_framework::movement::{Grounded, LocomotionConfig, MovementVelocity, PlayerControlled};
+use ndoto_framework::physics::BoxCollider;
 
 #[derive(Component)]
 pub struct SceneRoot;
@@ -54,7 +55,6 @@ pub fn setup_scene(
         perceptual_roughness: 0.72,
         ..default()
     });
-
     let root = commands
         .spawn((
             Name::new("SandboxSceneRoot"),
@@ -88,6 +88,7 @@ pub fn setup_scene(
         parent.spawn((
             Name::new("Cube"),
             RecordableEntity::Cube,
+            BoxCollider::new(Vec3::splat(0.9)),
             Mesh3d(meshes.add(Cuboid::new(1.8, 1.8, 1.8))),
             MeshMaterial3d(structure_material.clone()),
             Transform::from_xyz(-3.4, 0.9, -2.5),
@@ -96,6 +97,7 @@ pub fn setup_scene(
         parent.spawn((
             Name::new("Wall"),
             RecordableEntity::Wall,
+            BoxCollider::new(Vec3::new(0.35, 1.5, 3.6)),
             Mesh3d(meshes.add(Cuboid::new(0.7, 3.0, 7.2))),
             MeshMaterial3d(structure_material),
             Transform::from_xyz(4.0, 1.5, 0.4),
@@ -104,6 +106,7 @@ pub fn setup_scene(
         parent.spawn((
             Name::new("Pillar"),
             RecordableEntity::Pillar,
+            BoxCollider::new(Vec3::new(0.7, 1.8, 0.7)),
             Mesh3d(meshes.add(Cylinder::new(0.7, 3.6).mesh().resolution(48))),
             MeshMaterial3d(accent_material.clone()),
             Transform::from_xyz(0.6, 1.8, 4.6),
@@ -112,6 +115,7 @@ pub fn setup_scene(
         parent.spawn((
             Name::new("Block"),
             RecordableEntity::Block,
+            BoxCollider::new(Vec3::new(1.4, 0.4, 1.4)),
             Mesh3d(meshes.add(Cuboid::new(2.8, 0.8, 2.8))),
             MeshMaterial3d(accent_material),
             Transform::from_xyz(2.1, 0.4, -4.4),

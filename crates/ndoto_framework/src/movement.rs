@@ -1,7 +1,11 @@
 use bevy::prelude::*;
 use ndoto_engine::EngineFixedSet;
 
-use crate::{dimension::DimensionState, input::FixedPlayerInput, physics::DimensionQueryContext};
+use crate::{
+    dimension::DimensionState,
+    input::FixedPlayerInput,
+    physics::{BoxCollider, DimensionQueryContext},
+};
 
 #[derive(Component)]
 pub struct PlayerControlled;
@@ -13,6 +17,7 @@ pub struct LocomotionConfig {
     pub jump_velocity: f32,
     pub gravity: f32,
     pub ground_height: f32,
+    pub body_radius: f32,
     pub body_half_height: f32,
 }
 
@@ -24,6 +29,7 @@ impl Default for LocomotionConfig {
             jump_velocity: 5.6,
             gravity: 18.0,
             ground_height: 0.0,
+            body_radius: 0.45,
             body_half_height: 0.9,
         }
     }
@@ -52,6 +58,7 @@ pub fn apply_player_locomotion(
     time: Res<Time<Fixed>>,
     dimension_state: Res<DimensionState>,
     player_input: Res<FixedPlayerInput>,
+    colliders: Query<(&Transform, &BoxCollider), Without<PlayerControlled>>,
     mut players: Query<
         (
             &LocomotionConfig,
@@ -101,6 +108,13 @@ pub fn apply_player_locomotion(
         velocity.linear.x = projected_velocity.x;
         velocity.linear.z = projected_velocity.z;
 
+        resolve_static_collisions(
+            &mut transform.translation,
+            config.body_radius,
+            config.body_half_height,
+            colliders.iter(),
+        );
+
         let grounded_height = config.ground_height + config.body_half_height;
         if transform.translation.y <= grounded_height {
             transform.translation.y = grounded_height;
@@ -115,6 +129,56 @@ pub fn apply_player_locomotion(
 fn constrained_move_axis(move_axis: IVec2, query_context: DimensionQueryContext) -> Vec3 {
     let wish = Vec2::new(move_axis.x as f32, move_axis.y as f32).clamp_length_max(1.0);
     query_context.project_direction(Vec3::new(wish.x, 0.0, wish.y))
+}
+
+fn resolve_static_collisions<'a>(
+    player_position: &mut Vec3,
+    body_radius: f32,
+    body_half_height: f32,
+    colliders: impl Iterator<Item = (&'a Transform, &'a BoxCollider)>,
+) {
+    for (transform, collider) in colliders {
+        let min = transform.translation - collider.half_extents;
+        let max = transform.translation + collider.half_extents;
+
+        let player_bottom = player_position.y - body_half_height;
+        let player_top = player_position.y + body_half_height;
+        if player_top <= min.y || player_bottom >= max.y {
+            continue;
+        }
+
+        let closest = Vec2::new(
+            player_position.x.clamp(min.x, max.x),
+            player_position.z.clamp(min.z, max.z),
+        );
+        let player_xz = Vec2::new(player_position.x, player_position.z);
+        let delta = player_xz - closest;
+        let distance_squared = delta.length_squared();
+        if distance_squared >= body_radius * body_radius {
+            continue;
+        }
+
+        if distance_squared > f32::EPSILON {
+            let distance = distance_squared.sqrt();
+            let push = delta / distance * (body_radius - distance);
+            player_position.x += push.x;
+            player_position.z += push.y;
+            continue;
+        }
+
+        let expand_x = (max.x - min.x) * 0.5 + body_radius;
+        let expand_z = (max.z - min.z) * 0.5 + body_radius;
+        let offset_x = player_position.x - transform.translation.x;
+        let offset_z = player_position.z - transform.translation.z;
+        let penetration_x = expand_x - offset_x.abs();
+        let penetration_z = expand_z - offset_z.abs();
+
+        if penetration_x < penetration_z {
+            player_position.x += penetration_x.copysign(offset_x.signum());
+        } else {
+            player_position.z += penetration_z.copysign(offset_z.signum());
+        }
+    }
 }
 
 #[cfg(test)]
@@ -154,5 +218,21 @@ mod tests {
             ),
             Vec3::new(-std::f32::consts::FRAC_1_SQRT_2, 0.0, 0.0)
         );
+    }
+
+    #[test]
+    fn resolve_static_collisions_pushes_player_out_of_box() {
+        let collider_transform = Transform::from_xyz(0.0, 1.0, 0.0);
+        let collider = BoxCollider::new(Vec3::new(1.0, 1.0, 1.0));
+        let mut player_position = Vec3::new(0.2, 0.9, 0.0);
+
+        resolve_static_collisions(
+            &mut player_position,
+            0.45,
+            0.9,
+            [(&collider_transform, &collider)].into_iter(),
+        );
+
+        assert!(player_position.x > 1.0);
     }
 }
